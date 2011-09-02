@@ -12,7 +12,7 @@ class rvm {
   exec{"rvm install":
     command => "chmod +x /tmp/rvm_install && /tmp/rvm_install",
     creates => "/usr/local/rvm/bin/rvm",
-    require => Exec["fetch rvm install script"]
+    require => [Exec["fetch rvm install script"], Package[git-core]]
   }
 
   group{rvm:
