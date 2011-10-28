@@ -1,6 +1,6 @@
 Facter.add("default_rvm_ruby_string") do
   setcode do
-    s = %x{grep rvm_ruby_string= /usr/local/rvm/environments/default}
+    s = %x{grep -s rvm_ruby_string= /usr/local/rvm/environments/default}
     if s
       s =~ /rvm_ruby_string='([^']*)'/
       $1 
@@ -11,7 +11,7 @@ Facter.add("default_rvm_ruby_string") do
 end
 Facter.add("default_rvm_gem_home") do
   setcode do
-    s = %x{grep GEM_HOME= /usr/local/rvm/environments/default}
+    s = %x{grep -s GEM_HOME= /usr/local/rvm/environments/default}
     if s
       s =~ /GEM_HOME='([^']*)'/
       $1 
