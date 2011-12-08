@@ -41,7 +41,7 @@ class rvm {
       path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin",
       require => [$required, Exec["rvm install"]],
       command => "/usr/local/rvm/bin/rvm install $install_version",
-      timeout => "-1",
+      timeout => 0,
       logoutput => true,
       unless => "ls -l /usr/local/rvm/rubies/*$install_version*"
     }
