@@ -61,7 +61,7 @@ class rvm {
 
     exec{"generate rvm conf for apache2":
       require => File["/usr/local/rvm/environments/default"],
-      command => "grep -E '(GEM_HOME|GEM_PATH|MY_RUBY_HOME|RUBY_VERSION)=' /usr/local/rvm/environments/default | sed -e 's/^\([^=]*\)=\(.*\)$/SetEnV \1 \2/' > /usr/local/rvm/environments/default_apache",
+      command => 'grep -E "(GEM_HOME|GEM_PATH|MY_RUBY_HOME|RUBY_VERSION)=" /usr/local/rvm/environments/default | sed -e "s/^\([^=]*\)=\(.*\)$/SetEnV \1 \2/" > /usr/local/rvm/environments/default_apache',
      refreshonly => true
     }
     
