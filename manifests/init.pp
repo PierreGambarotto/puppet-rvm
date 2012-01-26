@@ -10,7 +10,7 @@ class rvm {
   }
 
   exec{"rvm install":
-    command => "chmod +x /tmp/rvm_install && /tmp/rvm_install",
+    command => "chmod +x /tmp/rvm_install && sudo /tmp/rvm_install",
     creates => "/usr/local/rvm/bin/rvm",
     require => Exec["fetch rvm install script"]
   }
@@ -21,7 +21,7 @@ class rvm {
 
   define ruby($version = ''){
     Exec{
-      path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin"
+      path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/rvm/bin"
     }
     $install_version = $version ? { '' => $name, default => $version }
     case $install_version {
@@ -38,10 +38,9 @@ class rvm {
       "jruby" => Class[java]
     }
     exec{"install ruby: $install_version":
-      path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin",
       require => [$required, Exec["rvm install"]],
-      command => "/usr/local/rvm/bin/rvm install $install_version",
-      timeout => 0,
+      command => "rvm install $install_version",
+      timeout => "0",
       logoutput => true,
       unless => "ls -l /usr/local/rvm/rubies/*$install_version*"
     }
@@ -53,16 +52,23 @@ class rvm {
     }
 
     exec{"make $install_version the default rvm ruby":
-      command => "/usr/local/rvm/bin/rvm use --default $install_version",
+# rvm alias create default <version>
+# see http://www.engineyard.com/blog/2012/rvm-stable-and-more/
+      command => "bash -c 'source /etc/profile.d/rvm.sh; rvm --default $install_version'",
+      logoutput => true,
       require => Exec["install ruby: $install_version"],
       unless => "grep $install_version /usr/local/rvm/environments/default",
-      notify => Exec["generate rvm conf for apache2"]
     }
 
+    file{"/usr/local/rvm/environments/default_apache":
+      require => Exec["generate rvm conf for apache2"],
+      ensure => present
+    }
     exec{"generate rvm conf for apache2":
-      require => File["/usr/local/rvm/environments/default"],
-      command => 'grep -E "(GEM_HOME|GEM_PATH|MY_RUBY_HOME|RUBY_VERSION)=" /usr/local/rvm/environments/default | sed -e "s/^\([^=]*\)=\(.*\)$/SetEnV \1 \2/" > /usr/local/rvm/environments/default_apache',
-     refreshonly => true
+      command => "sed -e 's/\; */\\n/g' /usr/local/rvm/environments/default | grep -E '(GEM_HOME|GEM_PATH|MY_RUBY_HOME|RUBY_VERSION)=' | sed -e 's/^\([^=]*\)=\(.*\)$/SetEnV \1 \2/' | tee /usr/local/rvm/environments/default_apache",
+      require => [Exec["make $install_version the default rvm ruby"],File["/usr/local/rvm/environments/default"]],
+      logoutput => true,
+      unless => "grep RUBY_VERSION /usr/local/rvm/environments/default_apache",
     }
     
   }
