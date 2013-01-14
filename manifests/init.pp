@@ -3,6 +3,10 @@ class rvm {
   Exec{
     path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin"
   }
+
+  if ! defined(Package[curl]){
+    package{curl:}
+  }
   exec{"fetch rvm install script":
     command => "curl -s https://raw.github.com/wayneeseguin/rvm/master/binscripts/rvm-installer > /tmp/rvm_install",
     unless => "grep -l '/usr/bin/env bash' /tmp/rvm_install",
@@ -10,7 +14,7 @@ class rvm {
   }
 
   exec{"rvm install":
-    command => "chmod +x /tmp/rvm_install && sudo /tmp/rvm_install",
+    command => "chmod +x /tmp/rvm_install && /tmp/rvm_install",
     creates => "/usr/local/rvm/bin/rvm",
     require => Exec["fetch rvm install script"]
   }
@@ -19,24 +23,44 @@ class rvm {
     require => Exec["rvm install"]
   }
 
+  define package_if_not_defined($ensure='present'){
+    if ! defined(Package[$name]) {
+      package{$name:
+        ensure => $ensure
+      }
+    }
+  }
+
+  define class_if_not_defined(){
+    if ! defined(Class[$name]) {
+      include $name
+    }
+  }
+
+  define gem($ensure='present'){
+    package{$name:
+      ensure => $ensure,
+      provider => rvmgem,
+      require => File["/usr/local/rvm/environments/default"]
+    }
+  }
   define ruby($version = ''){
     Exec{
       path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/rvm/bin"
     }
     $install_version = $version ? { '' => $name, default => $version }
     case $install_version {
-      /(1\.8\.7|1\.9\.2|ree)/: {
-        if ! defined(Package['build-essential']) {package {'build-essential':}}
-        if ! defined(Package['zlib1g-dev']) {package {'zlib1g-dev':}}
-        if ! defined(Package['libssl-dev']) {package {'libssl-dev':}}
-        if ! defined(Package['libreadline5-dev']) {package {'libreadline5-dev':}}
+      /(1\.8\.7|1\.9\.3|ree|rbx)/: { 
+        $mri_packages = [ 'build-essential','openssl','libreadline6','libreadline6-dev','curl','git-core','zlib1g','zlib1g-dev','libssl-dev','libyaml-dev','libsqlite3-dev','sqlite3','libxml2-dev','libxslt-dev','autoconf','libc6-dev','ncurses-dev','automake','libtool','bison','subversion']
+        $required = Package_if_not_defined[$mri_packages]
+        package_if_not_defined{$mri_packages:}
       }
-      "jruby": {if ! defined(Class[java]) {include java}}
+      'jruby': {
+        class_if_not_defined{java:}
+        $required = Class_if_not_defined[java]
+      }
     }
-    $required = $install_version ? {
-      /(1\.8\.7|1\.9\.2|ree)/ => Package["build-essential", "zlib1g-dev", "libssl-dev", "libreadline5-dev"],
-      "jruby" => Class[java]
-    }
+      
     exec{"install ruby: $install_version":
       require => [$required, Exec["rvm install"]],
       command => "rvm install $install_version",
@@ -73,8 +97,8 @@ class rvm {
     
   }
 
-  Package{
-    require => File["/usr/local/rvm/environments/default"]
-  }
+#  Package{
+#    require => File["/usr/local/rvm/environments/default"]
+#  }
 
 }
