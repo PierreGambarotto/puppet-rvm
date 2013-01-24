@@ -37,13 +37,6 @@ class rvm {
     }
   }
 
-  define gem($ensure='present'){
-    package{$name:
-      ensure => $ensure,
-      provider => rvmgem,
-      require => File["/usr/local/rvm/environments/default"]
-    }
-  }
   define ruby($version = ''){
     Exec{
       path => "/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/rvm/bin"
